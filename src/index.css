@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: var(--theme-bg-primary);
+  --color-bg-secondary: var(--theme-bg-secondary);
+  --color-bg-card: var(--theme-bg-card);
+  --color-bg-input: var(--theme-bg-input);
+  --color-accent: var(--theme-accent);
+  --color-accent-light: var(--theme-accent-light);
+  --color-accent-dark: var(--theme-accent-dark);
+  --color-text-primary: var(--theme-text-primary);
+  --color-text-secondary: var(--theme-text-secondary);
+  --color-border-gold: var(--theme-border-gold);
+  --color-border-gold-strong: var(--theme-border-gold-strong);
+  --font-family-cairo: 'Cairo', sans-serif;
+  --font-family-playfair: 'Playfair Display', serif;
+  --font-family-inter: 'Inter', sans-serif;
+}
+
+/* ===== DARK THEME (default) ===== */
+:root,
+.dark {
+  --theme-bg-primary: #0f1419;
+  --theme-bg-secondary: #1a1f2e;
+  --theme-bg-card: #1e2536;
+  --theme-bg-input: #141a27;
+  --theme-accent: #c9a96e;
+  --theme-accent-light: #dfc08a;
+  --theme-accent-dark: #a68b52;
+  --theme-text-primary: #e8e4df;
+  --theme-text-secondary: #8892a4;
+  --theme-border-gold: rgba(201, 169, 110, 0.15);
+  --theme-border-gold-strong: rgba(201, 169, 110, 0.3);
+  --theme-glass-bg: rgba(30, 37, 54, 0.6);
+  --theme-glow: rgba(201, 169, 110, 0.15);
+  --theme-glow2: rgba(201, 169, 110, 0.05);
+  --theme-blob1: rgba(201, 169, 110, 0.03);
+  --theme-blob2: rgba(201, 169, 110, 0.02);
+  --theme-nav-bg: rgba(15, 20, 25, 0.8);
+  --theme-admin-bg: rgba(201, 169, 110, 0.05);
+  --theme-admin-border: rgba(201, 169, 110, 0.1);
+  --theme-timeline-dot: #1a1f2e;
+}
+
+/* ===== LIGHT THEME ===== */
+.light {
+  --theme-bg-primary: #faf8f5;
+  --theme-bg-secondary: #f0ece5;
+  --theme-bg-card: #e8e2d8;
+  --theme-bg-input: #ffffff;
+  --theme-accent: #8b6914;
+  --theme-accent-light: #a67c1a;
+  --theme-accent-dark: #6d5210;
+  --theme-text-primary: #1a1612;
+  --theme-text-secondary: #6b6358;
+  --theme-border-gold: rgba(139, 105, 20, 0.15);
+  --theme-border-gold-strong: rgba(139, 105, 20, 0.25);
+  --theme-glass-bg: rgba(255, 255, 255, 0.7);
+  --theme-glow: rgba(139, 105, 20, 0.08);
+  --theme-glow2: rgba(139, 105, 20, 0.03);
+  --theme-blob1: rgba(139, 105, 20, 0.04);
+  --theme-blob2: rgba(139, 105, 20, 0.03);
+  --theme-nav-bg: rgba(250, 248, 245, 0.85);
+  --theme-admin-bg: rgba(139, 105, 20, 0.06);
+  --theme-admin-border: rgba(139, 105, 20, 0.12);
+  --theme-timeline-dot: #faf8f5;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-accent-dark) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--theme-accent-dark);
+  border-radius: 3px;
+}
+
+body {
+  font-family: var(--font-family-cairo);
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, var(--theme-accent-light), var(--theme-accent), var(--theme-accent-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass-card {
+  background: var(--theme-glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--theme-border-gold);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.glow-gold {
+  box-shadow: 0 0 20px var(--theme-glow), 0 0 40px var(--theme-glow2);
+}
+
+/* Theme transition for interactive elements */
+button, a, input, textarea, select {
+  transition: all 0.2s ease;
+}
+
+/* Print-only element: hidden on screen, shown when printing */
+.print-only {
+  display: none;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything except the print layout */
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Ensure background colours (navy sidebar, etc.) are rendered */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
