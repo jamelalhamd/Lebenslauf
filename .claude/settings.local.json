@@ -4,7 +4,10 @@
       "Bash(npm run *)",
       "Bash(npx vite *)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "PowerShell(cd \"C:\\\\Users\\\\takir\\\\Desktop\\\\test antigravitzy\\\\cv\"; Get-ChildItem -Recurse -Directory | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"C:\\\\Users\\\\takir\\\\Desktop\\\\test antigravitzy\\\\cv\\\\\", \"\"\\) })",
+      "PowerShell(cd \"C:\\\\Users\\\\takir\\\\Desktop\\\\test antigravitzy\\\\cv\\\\src\"; Get-ChildItem -Recurse -File | Select-Object @{N=\"Path\";E={$_.FullName.Replace\\(\"C:\\\\Users\\\\takir\\\\Desktop\\\\test antigravitzy\\\\cv\\\\src\\\\\", \"src\\\\\"\\)}} | Sort-Object Path | ForEach-Object { $_.Path })",
+      "Bash(node -e \"require\\('nodemailer'\\); console.log\\('nodemailer ok'\\)\")"
     ]
   }
 }
