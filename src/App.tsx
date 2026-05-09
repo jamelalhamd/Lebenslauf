@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Printer, ArrowUp, Menu, X, FileDown, LogIn, LogOut, Shield, Mail,
-  Sun, Moon, Flame, Cloud, CloudOff
+  Sun, Moon, Flame, Cloud, CloudOff, FolderOpen,
 } from 'lucide-react';
 import { CVData, PersonalInfo, Experience, Skill, Language, Certificate } from './types';
 import { loadCVData, saveCVDataWithSync, loadCVDataWithSync } from './store';
@@ -12,6 +12,7 @@ import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { useFirebase } from './contexts/FirebaseContext';
 import { subscribeToFirestore } from './lib/firestore';
+import { deleteFromCloudinary } from './lib/cloudinary';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import Sidebar from './components/Sidebar';
 import SummarySection from './components/SummarySection';
@@ -91,6 +92,12 @@ export default function CVPage() {
     showToast();
   }, [showToast]);
 
+  const handleDeletePhoto = useCallback(async () => {
+    await deleteFromCloudinary('cv/profile/photo', 'image');
+    setCvData(p => ({ ...p, personalInfo: { ...p.personalInfo, photoUrl: '' } }));
+    showToast();
+  }, [showToast]);
+
   const generatePDF = useCallback(async () => {
     if (isGeneratingPDF) return;
     setIsGeneratingPDF(true); // renders the loading overlay at z-index 9999
@@ -135,7 +142,6 @@ export default function CVPage() {
           allowTaint: true,
           scrollX: 0,
           scrollY: 0,
-          backgroundColor: '#ffffff',
         },
         jsPDF: { unit: 'mm', format: [210, heightMm], orientation: 'portrait' },
       }).save();
@@ -151,8 +157,28 @@ export default function CVPage() {
   const handleDeleteExperience = useCallback((id: string) => { setCvData(p => ({ ...p, experiences: p.experiences.filter(e => e.id !== id) })); showToast(); }, [showToast]);
   const handleSaveSkills = useCallback((s: Skill[]) => { setCvData(p => ({ ...p, skills: s })); showToast(); }, [showToast]);
   const handleSaveLanguages = useCallback((l: Language[]) => { setCvData(p => ({ ...p, languages: l })); showToast(); }, [showToast]);
-  const handleSaveCertificate = useCallback((d: Certificate) => { setCvData(p => { const ex = p.certificates.find(c => c.id === d.id); return ex ? { ...p, certificates: p.certificates.map(c => c.id === d.id ? d : c) } : { ...p, certificates: [...p.certificates, d] }; }); showToast(); }, [showToast]);
-  const handleDeleteCertificate = useCallback((id: string) => { setCvData(p => ({ ...p, certificates: p.certificates.filter(c => c.id !== id) })); showToast(); }, [showToast]);
+  const handleSaveCertificate = useCallback((d: Certificate) => {
+    setCvData(p => {
+      const existing = p.certificates.find(c => c.id === d.id);
+      if (existing?.filePublicId && existing.filePublicId !== d.filePublicId) {
+        deleteFromCloudinary(existing.filePublicId, existing.fileResourceType ?? 'raw').catch(console.error);
+      }
+      return existing
+        ? { ...p, certificates: p.certificates.map(c => c.id === d.id ? d : c) }
+        : { ...p, certificates: [...p.certificates, d] };
+    });
+    showToast();
+  }, [showToast]);
+  const handleDeleteCertificate = useCallback((id: string) => {
+    setCvData(p => {
+      const cert = p.certificates.find(c => c.id === id);
+      if (cert?.filePublicId) {
+        deleteFromCloudinary(cert.filePublicId, cert.fileResourceType ?? 'raw').catch(console.error);
+      }
+      return { ...p, certificates: p.certificates.filter(c => c.id !== id) };
+    });
+    showToast();
+  }, [showToast]);
 
   if (isLoading) {
     return (
@@ -196,6 +222,9 @@ export default function CVPage() {
             </button>
             <Link to="/contact" className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
               <Mail size={15} /><span className="hidden sm:inline">{t('nav.contact')}</span>
+            </Link>
+            <Link to="/files" className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
+              <FolderOpen size={15} /><span className="hidden sm:inline">Files</span>
             </Link>
             <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
               <Printer size={15} /><span className="hidden sm:inline">{t('nav.print')}</span>
@@ -357,6 +386,7 @@ export default function CVPage() {
         currentPhoto={cvData.personalInfo.photoUrl}
         onSave={handleSavePhoto}
         onClose={() => setPhotoCropOpen(false)}
+        onDeletePhoto={handleDeletePhoto}
       />
     </div>
   );

@@ -1,11 +1,14 @@
-import { CVData } from '../types';
+import { CVData, MediaFile } from '../types';
 import { defaultCVData } from '../data';
 import { migrateLevel } from '../i18n/translations';
 import {
-  doc, getDoc, setDoc, onSnapshot, Unsubscribe
+  doc, getDoc, setDoc, onSnapshot, Unsubscribe,
+  collection, deleteDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getDb, getStorageRef, isInitialized } from './firebase';
+
+const MEDIA_COLLECTION = 'media_files';
 
 const COLLECTION = 'cv_data';
 const DOC_ID = 'main';
@@ -83,6 +86,59 @@ export async function uploadFile(file: File, path: string): Promise<string | nul
     console.error('Upload error:', e);
     return null;
   }
+}
+
+export async function uploadPhotoToStorage(base64DataUrl: string): Promise<string | null> {
+  const st = getStorageRef();
+  if (!st) return null;
+  try {
+    const res = await fetch(base64DataUrl);
+    const blob = await res.blob();
+    const fileRef = ref(st, 'profile/photo.jpg');
+    await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
+    const url = await getDownloadURL(fileRef);
+    console.log('🖼️ Profile photo uploaded to Storage');
+    return url;
+  } catch (e) {
+    console.error('Photo upload error:', e);
+    return null;
+  }
+}
+
+export async function saveFileMetadata(file: MediaFile): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  try {
+    await setDoc(doc(db, MEDIA_COLLECTION, file.id), file);
+    return true;
+  } catch (e) {
+    console.error('Save file metadata error:', e);
+    return false;
+  }
+}
+
+export async function deleteFileMetadata(id: string): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  try {
+    await deleteDoc(doc(db, MEDIA_COLLECTION, id));
+    return true;
+  } catch (e) {
+    console.error('Delete file metadata error:', e);
+    return false;
+  }
+}
+
+export function subscribeToFiles(callback: (files: MediaFile[]) => void): Unsubscribe | null {
+  const db = getDb();
+  if (!db) return null;
+  return onSnapshot(collection(db, MEDIA_COLLECTION), (snap) => {
+    const files = snap.docs.map(d => d.data() as MediaFile);
+    files.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+    callback(files);
+  }, (error) => {
+    console.error('Files subscription error:', error);
+  });
 }
 
 export async function deleteFromFirestore(): Promise<boolean> {

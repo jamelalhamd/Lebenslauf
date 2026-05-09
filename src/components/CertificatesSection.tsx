@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Award, Edit3, Plus, Trash2, Eye, Download, ChevronDown, ChevronUp, EyeOff, FileImage } from 'lucide-react';
 import { Certificate } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getDownloadUrl } from '../lib/cloudinary';
 
 interface CertificatesSectionProps { certificates: Certificate[]; showCertificates: boolean; onToggleShow: () => void; onAdd: () => void; onEdit: (c: Certificate) => void; onDelete: (id: string) => void; onView: (c: Certificate) => void; isAdmin: boolean; }
 
@@ -55,7 +56,7 @@ export default function CertificatesSection({ certificates, showCertificates, on
                   <div className="flex flex-wrap gap-2">
                     {cert.fileUrl && (<>
                       <button onClick={() => onView(cert)} className="flex items-center gap-1 rounded-lg border border-border-gold px-2 py-1 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent"><Eye size={12} /><span>{t('certificates.view')}</span></button>
-                      <a href={cert.fileUrl} download={cert.fileName || 'certificate'} className="flex items-center gap-1 rounded-lg border border-border-gold px-2 py-1 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent"><Download size={12} /><span>{t('certificates.download')}</span></a>
+                      <a href={getDownloadUrl(cert.fileUrl, cert.fileResourceType ?? 'raw')} download={cert.fileName || 'certificate'} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg border border-border-gold px-2 py-1 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent"><Download size={12} /><span>{t('certificates.download')}</span></a>
                     </>)}
                     {isAdmin && (<>
                       <button onClick={() => onEdit(cert)} className="no-print flex items-center gap-1 rounded-lg border border-border-gold px-2 py-1 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent"><Edit3 size={12} /><span>{t('certificates.edit')}</span></button>

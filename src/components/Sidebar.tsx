@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, MapPin, Edit3, ChevronDown, ChevronUp, Award, Globe, Sparkles, Github, Linkedin, Camera } from 'lucide-react';
 import { PersonalInfo, Skill, Language } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getProfilePhotoUrl } from '../lib/cloudinary';
 
 interface SidebarProps {
   personalInfo: PersonalInfo; skills: Skill[]; languages: Language[];
@@ -69,7 +70,7 @@ export default function Sidebar({ personalInfo, skills, languages, onEditPersona
           <div className="mb-4 flex justify-center">
             <div className="relative group">
               {personalInfo.photoUrl ? (
-                <img src={personalInfo.photoUrl} alt={personalInfo.name} className="h-24 w-24 rounded-full border-2 border-accent object-cover" />
+                <img src={getProfilePhotoUrl(personalInfo.photoUrl!, 96)} alt={personalInfo.name} className="h-24 w-24 rounded-full border-2 border-accent object-cover" />
               ) : (
                 <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-accent bg-gradient-to-bl from-accent/20 to-accent-dark/20">
                   <span className="font-playfair text-3xl font-bold text-accent">{personalInfo.name.charAt(0)}</span>

@@ -1,4 +1,5 @@
 import type { CVData } from '../types';
+import { getProfilePhotoUrl } from '../lib/cloudinary';
 
 // ── colour palette (matches the PDF design) ────────────────────────────────
 const C_NAVY    = '#1b3a6b';
@@ -182,7 +183,7 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {p.photoUrl
-            ? <img src={p.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={getProfilePhotoUrl(p.photoUrl, 168)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <span style={{ fontSize: 30, fontWeight: 700, color: 'white' }}>{p.name.charAt(0)}</span>
           }
         </div>

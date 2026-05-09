@@ -39,6 +39,8 @@ export interface Certificate {
   description: string;
   fileUrl: string;
   fileName: string;
+  filePublicId?: string;
+  fileResourceType?: 'image' | 'raw';
 }
 
 export interface CVData {
@@ -58,3 +60,15 @@ export type EditSection =
   | null;
 
 export type ModalType = 'edit' | 'viewCertificate' | 'confirmDelete' | null;
+
+export interface MediaFile {
+  id: string;
+  url: string;
+  publicId: string;
+  name: string;
+  type: 'image' | 'document';
+  resourceType: 'image' | 'raw';
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+}

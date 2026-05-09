@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .vite-source-tags.js
 .vercel
+.mcp.json
+functions/.env
+functions/lib
