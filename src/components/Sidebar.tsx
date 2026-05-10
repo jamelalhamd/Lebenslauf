@@ -80,7 +80,7 @@ export default function Sidebar({ personalInfo, skills, languages, onEditPersona
               {isAdmin && onUploadPhoto && (
                 <button
                   onClick={onUploadPhoto}
-                  title="Foto hochladen & zuschneiden"
+                  title={t('editPersonalInfo.photoButton')}
                   className="no-print absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
                 >
                   <Camera size={22} className="text-white" />

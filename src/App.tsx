@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Printer, ArrowUp, Menu, X, FileDown, LogIn, LogOut, Shield, Mail,
-  Sun, Moon, Flame, Cloud, CloudOff, FolderOpen,
+  Sun, Moon, Flame, Cloud, CloudOff,
 } from 'lucide-react';
 import { CVData, PersonalInfo, Experience, Skill, Language, Certificate } from './types';
 import { loadCVData, saveCVData, saveCVDataWithSync, loadCVDataWithSync } from './store';
@@ -233,7 +233,7 @@ export default function CVPage() {
             {/* Firebase Status Indicator */}
             <div className={`hidden sm:flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] ${connected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
               {connected ? <Cloud size={11} /> : <CloudOff size={11} />}
-              <span>{connected ? 'Cloud' : 'Local'}</span>
+              <span>{connected ? t('nav.cloud') : t('nav.local')}</span>
             </div>
             <LanguageSwitcher />
             <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-gold text-text-secondary transition-all hover:border-accent hover:text-accent" title={isDark ? t('nav.theme.light') : t('nav.theme.dark')}>
@@ -242,9 +242,7 @@ export default function CVPage() {
             <Link to="/contact" className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
               <Mail size={15} /><span className="hidden sm:inline">{t('nav.contact')}</span>
             </Link>
-            <Link to="/files" className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
-              <FolderOpen size={15} /><span className="hidden sm:inline">{t('nav.files')}</span>
-            </Link>
+
             <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
               <Printer size={15} /><span className="hidden sm:inline">{t('nav.print')}</span>
             </button>
@@ -301,7 +299,7 @@ export default function CVPage() {
               <Shield size={12} className="text-accent" /><span className="text-xs text-accent">{t('nav.adminMode')}</span>
               <div className="ms-auto flex items-center gap-1.5 text-[10px]">
                 {connected ? <Cloud size={10} className="text-green-400" /> : <CloudOff size={10} className="text-red-400" />}
-                <span className={connected ? 'text-green-400' : 'text-red-400'}>{connected ? 'Firebase Connected' : 'Offline'}</span>
+                <span className={connected ? 'text-green-400' : 'text-red-400'}>{connected ? t('nav.firebaseConnected') : t('nav.offline')}</span>
               </div>
             </div>
           </div>

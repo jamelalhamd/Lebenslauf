@@ -9,21 +9,6 @@ const C_SIDE    = '#c0d4ea';
 const C_MUTED   = '#8aaac8';
 const C_SKILL   = 'rgba(255,255,255,0.13)';
 
-// ── static CV sections ─────────────────────────────────────────────────────
-const SKILL_CATS = [
-  { label: 'Frontend',    skills: ['React.js', 'Flutter', 'HTML5/CSS3', 'Tailwind'] },
-  { label: 'Backend',     skills: ['Node.js', 'Laravel', 'PHP', 'C#', 'Java'] },
-  { label: 'Datenbanken', skills: ['MongoDB', 'MySQL', 'SQL'] },
-  { label: 'DevOps',      skills: ['Git', 'GitHub', 'REST APIs'] },
-  { label: 'AI & Auto.',  skills: ['Claude Code', 'n8n', 'Replit'] },
-];
-
-const EDUCATION = [
-  { degree: 'Fachinformatiker AE', institution: 'Swoppen GmbH',         years: '2025–2027' },
-  { degree: 'B.Sc. Informatik',    institution: 'Syrian Virtual Univ.', years: '2013–2018' },
-  { degree: 'B.A. Anglistik',      institution: 'Univ. al-Baath',       years: '2004–2008' },
-];
-
 const LANG_BARS: Record<string, { color: string; w: string }> = {
   native:       { color: '#4caf50', w: '100%' },
   advanced:     { color: '#2196f3', w: '85%'  },
@@ -196,7 +181,9 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
           <p style={{ fontSize: '10.5pt', margin: '3px 0 6px', color: C_SIDE, fontWeight: 300 }}>
             {p.title}
           </p>
-          <p style={{ fontSize: '8pt', margin: '1px 0', color: C_MUTED }}>{p.address}</p>
+          <p style={{ fontSize: '8pt', margin: '1px 0', color: C_MUTED }}>
+            {[[p.street, p.houseNumber].filter(Boolean).join(' '), p.address].filter(Boolean).join(', ')}
+          </p>
           <p style={{ fontSize: '8pt', margin: '1px 0', color: C_MUTED }}>
             {p.phone}&nbsp;&nbsp;|&nbsp;&nbsp;{p.email}
           </p>
@@ -218,7 +205,7 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
             <KV k="Tel:"  v={p.phone} />
             <KV k="Mail:" v={p.email} />
             <KV k="Web:"  v={githubDisplay} />
-            <KV k="Ort:"  v={p.address} />
+            <KV k="Ort:"  v={[[p.street, p.houseNumber].filter(Boolean).join(' '), p.address].filter(Boolean).join(', ')} />
           </SideSection>
 
           <SideSection label="SPRACHEN">
@@ -228,29 +215,22 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
           </SideSection>
 
           <SideSection label="TECH SKILLS">
-            {SKILL_CATS.map(cat => (
-              <div key={cat.label} style={{ marginBottom: 9 }}>
-                <div style={{ fontSize: '7.5pt', fontWeight: 700, color: C_ORANGE, marginBottom: 4 }}>
-                  {cat.label}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                  {cat.skills.map(s => (
-                    <span key={s} style={{
-                      background: C_SKILL, borderRadius: 3,
-                      padding: '2px 5px', fontSize: '7pt', color: 'white',
-                    }}>{s}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+              {data.skills.map(s => (
+                <span key={s.id} style={{
+                  background: C_SKILL, borderRadius: 3,
+                  padding: '2px 5px', fontSize: '7pt', color: 'white',
+                }}>{s.name}</span>
+              ))}
+            </div>
           </SideSection>
 
           <SideSection label="AUSBILDUNG">
-            {EDUCATION.map(e => (
-              <div key={e.degree} style={{ marginBottom: 11 }}>
-                <div style={{ fontSize: '8pt', fontWeight: 700, color: 'white' }}>{e.degree}</div>
+            {data.certificates.map(c => (
+              <div key={c.id} style={{ marginBottom: 11 }}>
+                <div style={{ fontSize: '8pt', fontWeight: 700, color: 'white' }}>{c.name}</div>
                 <div style={{ fontSize: '7.5pt', color: C_MUTED, marginTop: 2 }}>
-                  {e.institution}&nbsp;&nbsp;{e.years}
+                  {c.issuer}{c.date ? `  ${c.date.slice(0, 4)}` : ''}
                 </div>
               </div>
             ))}

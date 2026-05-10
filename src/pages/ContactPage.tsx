@@ -103,7 +103,10 @@ export default function ContactPage() {
       icon: <MapPin size={20} className="text-blue-400" />,
       color: 'from-blue-500/20 to-blue-600/10',
       label: t('contact.addressMethod'),
-      value: cvData.personalInfo.address,
+      value: [
+        [cvData.personalInfo.street, cvData.personalInfo.houseNumber].filter(Boolean).join(' '),
+        cvData.personalInfo.address,
+      ].filter(Boolean).join(', '),
       href: null,
     },
   ];

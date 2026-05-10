@@ -3,6 +3,7 @@ import Cropper from 'react-easy-crop';
 import { Upload, RotateCcw, Check, X, SunMedium, Contrast, Droplets, Trash2, AlertCircle } from 'lucide-react';
 import { getCroppedImage, type CropArea, type ImageAdjustments } from '../lib/cropImage';
 import { uploadPhotoToCloudinary } from '../lib/cloudinary';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   isOpen: boolean;
@@ -39,6 +40,7 @@ function Slider({
 }
 
 export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, onDeletePhoto }: Props) {
+  const { t } = useLanguage();
   const [rawImage, setRawImage] = useState<string | null>(currentPhoto || null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -59,11 +61,11 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
     setError(null);
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Ungültiger Dateityp. Nur JPG, PNG, WebP oder GIF erlaubt.');
+      setError(t('photo.invalidType'));
       return;
     }
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`Datei zu groß. Maximale Größe: ${MAX_SIZE_MB} MB.`);
+      setError(t('photo.tooLarge').replace('{max}', String(MAX_SIZE_MB)));
       return;
     }
 
@@ -88,7 +90,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
       onSave(result.url, result.publicId);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen. Bitte erneut versuchen.');
+      setError(err instanceof Error ? err.message : t('photo.uploadFailed'));
     } finally {
       setUploadStep(null);
     }
@@ -106,7 +108,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
   };
 
   const isBusy = uploadStep !== null;
-  const stepLabel = uploadStep === 'cropping' ? 'Wird zugeschnitten…' : uploadStep === 'uploading' ? 'Wird hochgeladen…' : '';
+  const stepLabel = uploadStep === 'cropping' ? t('photo.cropping') : uploadStep === 'uploading' ? t('photo.uploading') : '';
 
   if (!isOpen) return null;
 
@@ -118,8 +120,8 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-gold px-5 py-4">
-          <h2 className="font-cairo text-base font-bold text-text-primary">Profilfoto hochladen</h2>
-          <button type="button" onClick={onClose} disabled={isBusy} aria-label="Schließen" className="flex h-8 w-8 items-center justify-center rounded-xl text-text-secondary transition-all hover:bg-bg-card hover:text-accent disabled:opacity-40">
+          <h2 className="font-cairo text-base font-bold text-text-primary">{t('photo.title')}</h2>
+          <button type="button" onClick={onClose} disabled={isBusy} aria-label={t('viewCert.close')} className="flex h-8 w-8 items-center justify-center rounded-xl text-text-secondary transition-all hover:bg-bg-card hover:text-accent disabled:opacity-40">
             <X size={16} />
           </button>
         </div>
@@ -154,7 +156,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
                 <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-current">
                   <Upload size={24} />
                 </div>
-                <span className="text-sm">Foto auswählen oder hierher ziehen</span>
+                <span className="text-sm">{t('photo.select')}</span>
                 <span className="text-xs opacity-60">JPG, PNG, WebP · max {MAX_SIZE_MB} MB</span>
               </button>
             )}
@@ -186,7 +188,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-accent/50 bg-accent/5 py-2 text-sm text-accent transition-all hover:border-accent hover:bg-accent/10 disabled:opacity-40"
               >
                 <Upload size={14} />
-                {rawImage ? 'Anderes Foto wählen' : 'Foto hochladen'}
+                {rawImage ? t('photo.change') : t('editPersonalInfo.photoButton')}
               </button>
               {rawImage && (
                 <button
@@ -194,7 +196,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
                   disabled={isBusy}
                   onClick={reset}
                   className="flex items-center gap-1.5 rounded-xl border border-border-gold px-3 py-2 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent disabled:opacity-40"
-                  title="Anpassungen zurücksetzen"
+                  title={t('photo.resetAdj')}
                 >
                   <RotateCcw size={14} />
                 </button>
@@ -213,11 +215,11 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
                   onChange={v => setZoom(v / 100)}
                 />
                 <div className="border-t border-border-gold pt-4">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">Bildanpassungen</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">{t('photo.adjustments')}</p>
                   <div className="space-y-3">
-                    <Slider label="Helligkeit" icon={<SunMedium size={13} />} value={adj.brightness} onChange={v => setAdj(a => ({ ...a, brightness: v }))} />
-                    <Slider label="Kontrast" icon={<Contrast size={13} />} value={adj.contrast} onChange={v => setAdj(a => ({ ...a, contrast: v }))} />
-                    <Slider label="Sättigung" icon={<Droplets size={13} />} value={adj.saturation} onChange={v => setAdj(a => ({ ...a, saturation: v }))} />
+                    <Slider label={t('photo.brightness')} icon={<SunMedium size={13} />} value={adj.brightness} onChange={v => setAdj(a => ({ ...a, brightness: v }))} />
+                    <Slider label={t('photo.contrast')} icon={<Contrast size={13} />} value={adj.contrast} onChange={v => setAdj(a => ({ ...a, contrast: v }))} />
+                    <Slider label={t('photo.saturation')} icon={<Droplets size={13} />} value={adj.saturation} onChange={v => setAdj(a => ({ ...a, saturation: v }))} />
                   </div>
                 </div>
               </>
@@ -235,7 +237,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
               className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-sm text-red-400 transition-all hover:bg-red-500/15 disabled:opacity-40"
             >
               <Trash2 size={14} />
-              <span className="hidden sm:inline">Löschen</span>
+              <span className="hidden sm:inline">{t('certificates.delete')}</span>
             </button>
           )}
           <button
@@ -247,7 +249,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
             {isBusy
               ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-bg-primary border-t-transparent" />
               : <Check size={15} />}
-            {isBusy ? stepLabel : 'Foto speichern'}
+            {isBusy ? stepLabel : t('photo.save')}
           </button>
           <button
             type="button"
@@ -255,7 +257,7 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
             disabled={isBusy}
             className="flex-1 rounded-xl border border-border-gold py-2.5 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent disabled:opacity-40"
           >
-            Abbrechen
+            {t('modal.cancel')}
           </button>
         </div>
       </div>
