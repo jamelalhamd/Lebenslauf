@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,7 +6,7 @@ import {
   Sun, Moon, Flame, Cloud, CloudOff, FolderOpen,
 } from 'lucide-react';
 import { CVData, PersonalInfo, Experience, Skill, Language, Certificate } from './types';
-import { loadCVData, saveCVDataWithSync, loadCVDataWithSync } from './store';
+import { loadCVData, saveCVData, saveCVDataWithSync, loadCVDataWithSync } from './store';
 import { useAuth } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
@@ -49,6 +49,9 @@ export default function CVPage() {
   const { t, dir } = useLanguage();
   const { connected, setLastSync } = useFirebase();
   const navigate = useNavigate();
+  // Prevents the save-useEffect from writing Firestore data back to Firestore
+  // when cvData changes because of a real-time snapshot (feedback loop guard).
+  const isFirestoreUpdate = useRef(false);
 
   // Load data from Firebase on mount
   useEffect(() => {
@@ -65,17 +68,24 @@ export default function CVPage() {
   // Subscribe to real-time Firestore updates
   useEffect(() => {
     const unsub = subscribeToFirestore((data) => {
+      isFirestoreUpdate.current = true; // mark so the save-effect skips write-back
       setCvData(data);
       setLastSync(new Date());
     });
     return () => { if (unsub) unsub(); };
   }, [setLastSync]);
 
-  // Save locally whenever data changes + sync to Firebase
+  // Persist data whenever it changes.
+  // If the change came from a Firestore snapshot, only update localStorage (avoids
+  // writing the snapshot straight back to Firestore and creating an infinite loop).
   useEffect(() => {
-    if (!isLoading) {
-      saveCVDataWithSync(cvData);
+    if (isLoading) return;
+    if (isFirestoreUpdate.current) {
+      isFirestoreUpdate.current = false;
+      saveCVData(cvData); // local cache only
+      return;
     }
+    saveCVDataWithSync(cvData); // local + Firestore
   }, [cvData, isLoading]);
 
   useEffect(() => {
@@ -87,14 +97,23 @@ export default function CVPage() {
   const showToast = useCallback(() => { setShowSuccessToast(true); setTimeout(() => setShowSuccessToast(false), 2500); }, []);
   const handleSavePersonalInfo = useCallback((d: PersonalInfo) => { setCvData(p => ({ ...p, personalInfo: d })); showToast(); }, [showToast]);
 
-  const handleSavePhoto = useCallback((photoUrl: string) => {
-    setCvData(p => ({ ...p, personalInfo: { ...p.personalInfo, photoUrl } }));
+  const handleSavePhoto = useCallback((photoUrl: string, photoPublicId: string) => {
+    setCvData(p => {
+      // Delete previous photo from Cloudinary (fire-and-forget)
+      if (p.personalInfo.photoPublicId) {
+        deleteFromCloudinary(p.personalInfo.photoPublicId, 'image').catch(console.warn);
+      }
+      return { ...p, personalInfo: { ...p.personalInfo, photoUrl, photoPublicId } };
+    });
     showToast();
   }, [showToast]);
 
-  const handleDeletePhoto = useCallback(async () => {
-    await deleteFromCloudinary('cv/profile/photo', 'image');
-    setCvData(p => ({ ...p, personalInfo: { ...p.personalInfo, photoUrl: '' } }));
+  const handleDeletePhoto = useCallback(() => {
+    setCvData(p => {
+      const publicId = p.personalInfo.photoPublicId ?? 'cv/profile/photo';
+      deleteFromCloudinary(publicId, 'image').catch(console.warn);
+      return { ...p, personalInfo: { ...p.personalInfo, photoUrl: '', photoPublicId: undefined } };
+    });
     showToast();
   }, [showToast]);
 
@@ -185,7 +204,7 @@ export default function CVPage() {
       <div className="flex min-h-screen items-center justify-center bg-bg-primary" dir={dir}>
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-          <p className="text-sm text-text-secondary">Loading...</p>
+          <p className="text-sm text-text-secondary">{t('app.loading')}</p>
         </div>
       </div>
     );
@@ -224,7 +243,7 @@ export default function CVPage() {
               <Mail size={15} /><span className="hidden sm:inline">{t('nav.contact')}</span>
             </Link>
             <Link to="/files" className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
-              <FolderOpen size={15} /><span className="hidden sm:inline">Files</span>
+              <FolderOpen size={15} /><span className="hidden sm:inline">{t('nav.files')}</span>
             </Link>
             <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl border border-border-gold bg-bg-secondary/50 px-3 py-2 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent sm:px-4 sm:text-sm">
               <Printer size={15} /><span className="hidden sm:inline">{t('nav.print')}</span>
@@ -237,7 +256,7 @@ export default function CVPage() {
               {isGeneratingPDF
                 ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-bg-primary border-t-transparent" />
                 : <FileDown size={15} />}
-              <span className="hidden sm:inline">{isGeneratingPDF ? 'PDF wird erstellt…' : t('nav.downloadPdf')}</span>
+              <span className="hidden sm:inline">{isGeneratingPDF ? t('pdf.generating') : t('nav.downloadPdf')}</span>
             </button>
             {isAdmin && (
               <Link to="/firebase" className="flex items-center gap-2 rounded-xl border border-orange-400/20 bg-orange-400/5 px-3 py-2 text-xs text-orange-400 transition-all hover:bg-orange-400/10 sm:px-4 sm:text-sm">
@@ -369,8 +388,8 @@ export default function CVPage() {
         <div className="no-print fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-4"
           style={{ background: 'rgba(10,14,20,0.92)' }}>
           <div className="h-14 w-14 animate-spin rounded-full border-[3px] border-accent/20 border-t-accent" />
-          <p className="text-base font-semibold text-text-primary">PDF wird erstellt…</p>
-          <p className="text-sm text-text-secondary">Bitte einen Moment warten</p>
+          <p className="text-base font-semibold text-text-primary">{t('pdf.generating')}</p>
+          <p className="text-sm text-text-secondary">{t('pdf.pleaseWait')}</p>
         </div>
       )}
 

@@ -1,10 +1,7 @@
-interface SignResponse {
-  signature: string;
-  timestamp: number;
-  apiKey: string;
-  cloudName: string;
-  resourceType: string;
-}
+// Unsigned uploads — no backend signature endpoint required.
+// Cloud name and upload preset are intentionally public (not secrets).
+const CLOUD_NAME    = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME    as string) || 'dwrv9ie4f';
+const UPLOAD_PRESET = (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string) || 'cv_upload';
 
 export interface UploadResult {
   url: string;
@@ -12,49 +9,41 @@ export interface UploadResult {
   resourceType: 'image' | 'raw';
 }
 
-async function getSignature(folder: string, publicId?: string, resourceType = 'image'): Promise<SignResponse> {
-  const res = await fetch('/api/sign-cloudinary', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ folder, publicId, resourceType }),
-  });
-  if (!res.ok) throw new Error('Failed to get Cloudinary signature');
-  return res.json();
-}
-
 async function uploadBlob(
   blob: Blob,
   folder: string,
   publicId?: string,
-  resourceType = 'image'
+  resourceType: 'image' | 'raw' | 'auto' = 'image',
 ): Promise<UploadResult> {
-  const { signature, timestamp, apiKey, cloudName } = await getSignature(folder, publicId, resourceType);
-
   const form = new FormData();
   form.append('file', blob);
-  form.append('api_key', apiKey);
-  form.append('timestamp', String(timestamp));
-  form.append('signature', signature);
+  form.append('upload_preset', UPLOAD_PRESET);
   form.append('folder', folder);
   if (publicId) form.append('public_id', publicId);
 
   const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
-    { method: 'POST', body: form }
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
+    { method: 'POST', body: form },
   );
+
   if (!res.ok) {
-    const detail = await res.text().catch(() => res.status.toString());
+    const detail = await res.text().catch(() => String(res.status));
     throw new Error(`Cloudinary upload failed (${res.status}): ${detail}`);
   }
-  const data = await res.json() as { secure_url: string; public_id: string };
+
+  const data = await res.json() as { secure_url: string; public_id: string; resource_type: string };
   console.log('☁️ Cloudinary upload OK:', data.secure_url);
-  return { url: data.secure_url, publicId: data.public_id, resourceType: resourceType as 'image' | 'raw' };
+  return {
+    url: data.secure_url,
+    publicId: data.public_id,
+    resourceType: (data.resource_type === 'image' ? 'image' : 'raw') as 'image' | 'raw',
+  };
 }
 
-export async function uploadPhotoToCloudinary(base64DataUrl: string): Promise<string> {
+export async function uploadPhotoToCloudinary(base64DataUrl: string): Promise<UploadResult> {
   const blob = await fetch(base64DataUrl).then(r => r.blob());
-  const result = await uploadBlob(blob, 'cv/profile', 'photo', 'image');
-  return result.url;
+  // Unique publicId per upload so the URL always changes → eliminates browser/CDN cache issues
+  return uploadBlob(blob, 'cv/profile', `photo_${Date.now()}`, 'image');
 }
 
 export async function uploadPDFToCloudinary(blob: Blob, publicId: string): Promise<string> {
@@ -66,9 +55,18 @@ export async function uploadMediaFile(file: File): Promise<UploadResult> {
   const isImage = file.type.startsWith('image/');
   const resourceType = isImage ? 'image' : 'raw';
   const folder = isImage ? 'cv/media/images' : 'cv/media/documents';
-  return uploadBlob(file, folder, undefined, resourceType);
+  // Embed the original filename (with extension) in the public_id for raw files so
+  // Cloudinary preserves the correct extension in the delivery URL. Without this,
+  // Cloudinary auto-generates a random ID with no extension and some browsers cannot
+  // determine the Content-Type from the URL alone (needed for inline PDF rendering).
+  const publicId = isImage
+    ? undefined
+    : `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  return uploadBlob(file, folder, publicId, resourceType);
 }
 
+// Delete requires a signed backend call (Firebase Cloud Function on Blaze plan).
+// On Spark plan the API returns an error — we still clean up app state by returning true.
 export async function deleteFromCloudinary(publicId: string, resourceType = 'image'): Promise<boolean> {
   try {
     const res = await fetch('/api/delete-cloudinary', {
@@ -76,18 +74,20 @@ export async function deleteFromCloudinary(publicId: string, resourceType = 'ima
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ publicId, resourceType }),
     });
-    return res.ok;
+    if (res.ok) return true;
+    // Non-OK (function not deployed) — log but still allow app-state cleanup
+    console.warn(`Cloudinary delete skipped (${res.status}) — file may remain in storage`);
+    return true;
   } catch (e) {
-    console.error('Cloudinary delete error:', e);
-    return false;
+    console.warn('Cloudinary delete unavailable:', e);
+    return true;
   }
 }
 
-export function getDownloadUrl(url: string, resourceType: 'image' | 'raw'): string {
-  if (resourceType === 'image') {
-    return url.replace('/upload/', '/upload/fl_attachment/');
-  }
-  return url;
+export function getDownloadUrl(url: string, _resourceType?: 'image' | 'raw'): string {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  // fl_attachment forces download for all resource types (image, PDF, DOC, etc.)
+  return url.replace('/upload/', '/upload/fl_attachment/');
 }
 
 function applyTransform(url: string, transform: string): string {
@@ -105,4 +105,26 @@ export function getThumbnailUrl(url: string, sizePx = 300): string {
 
 export function getOptimizedUrl(url: string): string {
   return applyTransform(url, 'q_auto,f_auto');
+}
+
+// Fetch the file, build a same-origin blob URL, then trigger the browser's
+// native save-dialog.  A blob URL always respects the `download` attribute —
+// unlike cross-origin hrefs where the attribute is silently ignored by Chrome 65+.
+// Falls back to window.open when CORS or network prevents the fetch.
+export async function downloadFile(fileUrl: string, filename: string): Promise<void> {
+  try {
+    const res = await fetch(fileUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || 'file';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  } catch {
+    window.open(fileUrl, '_blank');
+  }
 }

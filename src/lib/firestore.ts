@@ -141,6 +141,31 @@ export function subscribeToFiles(callback: (files: MediaFile[]) => void): Unsubs
   });
 }
 
+export function subscribeToTranslations(
+  lang: string,
+  onData: (labels: Record<string, string>) => void,
+  onSeed: () => void,
+): Unsubscribe | null {
+  const db = getDb();
+  if (!db) return null;
+  return onSnapshot(
+    doc(db, 'translations', lang),
+    snap => (snap.exists() ? onData(snap.data() as Record<string, string>) : onSeed()),
+    error => console.error(`Translations sync error (${lang}):`, error),
+  );
+}
+
+export async function saveTranslationDoc(lang: string, labels: Record<string, string>): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await setDoc(doc(db, 'translations', lang), labels);
+    console.log(`📝 Translations seeded — ${lang}`);
+  } catch (e) {
+    console.warn(`Failed to seed translations — ${lang}:`, e);
+  }
+}
+
 export async function deleteFromFirestore(): Promise<boolean> {
   const db = getDb();
   if (!db) return false;

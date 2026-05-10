@@ -7,7 +7,7 @@ import { uploadPhotoToCloudinary } from '../lib/cloudinary';
 interface Props {
   isOpen: boolean;
   currentPhoto?: string;
-  onSave: (url: string) => void;
+  onSave: (url: string, publicId: string) => void;
   onClose: () => void;
   onDeletePhoto?: () => void;
 }
@@ -84,8 +84,8 @@ export default function PhotoCropModal({ isOpen, currentPhoto, onSave, onClose, 
     try {
       const base64 = await getCroppedImage(rawImage, croppedAreaPixels, adj, 500);
       setUploadStep('uploading');
-      const remoteUrl = await uploadPhotoToCloudinary(base64);
-      onSave(remoteUrl);
+      const result = await uploadPhotoToCloudinary(base64);
+      onSave(result.url, result.publicId);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen. Bitte erneut versuchen.');

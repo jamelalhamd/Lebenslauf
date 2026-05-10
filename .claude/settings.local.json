@@ -13,7 +13,25 @@
       "Skill(update-config)",
       "Skill(update-config:*)",
       "Bash(dir \"c:\\\\Users\\\\takir\\\\Desktop\\\\test antigravitzy\\\\cv\")",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(curl -s -X POST https://api.cloudinary.com/v1_1/dwrv9ie4f/upload_presets -u 138356918452349:7zlCgNBBlGmSsBeGWUztBWam52M -d 'name=cv_upload&unsigned=true&overwrite=true&resource_type=auto')",
+      "Bash(curl -s -X POST https://api.cloudinary.com/v1_1/dwrv9ie4f/upload_presets -u 138356918452349:7zlCgNBBlGmSsBeGWUztBWam52M -d 'name=cv_upload&unsigned=true&resource_type=auto')",
+      "Bash(curl -s -X POST https://api.cloudinary.com/v1_1/dwrv9ie4f/auto/upload -F 'file=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' -F upload_preset=cv_upload -F folder=cv/test)",
+      "Bash(curl -s -X POST https://api.cloudinary.com/v1_1/dwrv9ie4f/image/destroy -u 138356918452349:7zlCgNBBlGmSsBeGWUztBWam52M -d public_id=cv/test/mvjneblgutmwtz1r5fis)",
+      "Bash(curl -s -X POST https://api.cloudinary.com/v1_1/dwrv9ie4f/image/upload -F file=@/tmp/px.png -F upload_preset=cv_upload -F folder=cv/profile -F public_id=photo)",
+      "Bash(echo \"This is a test document\")",
+      "Bash(curl -s -X POST \"https://api.cloudinary.com/v1_1/dwrv9ie4f/raw/upload\" -F \"file=@/tmp/test_doc.txt\" -F \"upload_preset=cv_upload\" -F \"folder=cv/media/documents\")",
+      "Bash(npx firebase *)",
+      "Bash(curl -s \"https://lebenslauf-aec7c.web.app/\")",
+      "Bash(curl -sI \"https://lebenslauf-aec7c.web.app/\")",
+      "Bash(curl -v \"https://lebenslauf-aec7c.web.app/\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\takir\\\\Desktop\\\\test antigravitzy\\\\cv\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(grep -E \"^\\\\-.*\\\\.\\(json|ts|tsx|yaml|yml\\)$|^d\")",
+      "Bash(npx vercel *)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(git stash *)"
     ]
   },
   "enableAllProjectMcpServers": true

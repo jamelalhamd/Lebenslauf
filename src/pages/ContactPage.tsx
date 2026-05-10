@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Send, Mail, User, FileText, CheckCircle, AlertCircle,
+  Mail, User, CheckCircle, AlertCircle,
   ArrowRight, Sun, Moon, Loader2, Phone, MapPin, MessageCircle,
 } from 'lucide-react';
 import { validateEmail, validateRequired, loadCVData } from '../store';
@@ -11,19 +11,25 @@ import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const CONTACT_EMAIL = 'alsalamkulturzentrum@gmail.com';
+const WHATSAPP_NUMBER = '4917682216044';
 const WHATSAPP_DISPLAY = '+49 176 82216044';
-const WHATSAPP_LINK = 'https://wa.me/4917682216044';
+const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}`;
 
-interface FormData { name: string; email: string; subject: string; message: string }
-interface FormErrors { name?: string; email?: string; subject?: string; message?: string }
+interface FormData { name: string; email: string; message: string }
+interface FormErrors { name?: string; email?: string; message?: string }
 type FormStatus = 'idle' | 'loading' | 'success' | 'error';
+
+function buildWhatsAppUrl(form: FormData): string {
+  const text = `*Name:* ${form.name}\n*Email:* ${form.email}\n\n${form.message}`;
+  return `${WHATSAPP_LINK}?text=${encodeURIComponent(text)}`;
+}
 
 export default function ContactPage() {
   const cvData = loadCVData();
   const { isDark, toggleTheme } = useTheme();
   const { t, dir } = useLanguage();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<FormData>({ name: '', email: '', subject: '', message: '' });
+  const [formData, setFormData] = useState<FormData>({ name: '', email: '', message: '' });
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<FormStatus>('idle');
 
@@ -32,7 +38,6 @@ export default function ContactPage() {
     if (!validateRequired(formData.name)) e.name = t('contact.nameRequired');
     if (!validateRequired(formData.email)) e.email = t('contact.emailRequired');
     else if (!validateEmail(formData.email)) e.email = t('contact.emailInvalid');
-    if (!validateRequired(formData.subject)) e.subject = t('contact.subjectRequired');
     if (!validateRequired(formData.message)) e.message = t('contact.messageRequired');
     setErrors(e);
     return !Object.keys(e).length;
@@ -48,17 +53,22 @@ export default function ContactPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          subject: formData.subject,
+          subject: `Message from ${formData.name}`,
           message: formData.message,
         }),
       });
       const json = await res.json() as { success: boolean };
       if (!json.success) throw new Error('send failed');
       setStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      setFormData({ name: '', email: '', message: '' });
     } catch {
       setStatus('error');
     }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!validate()) return;
+    window.open(buildWhatsAppUrl(formData), '_blank', 'noopener,noreferrer');
   };
 
   const handleChange = (f: keyof FormData, v: string) => {
@@ -107,14 +117,14 @@ export default function ContactPage() {
 
       <nav className="sticky top-0 z-40 border-b border-border-gold backdrop-blur-xl" style={{ backgroundColor: 'var(--theme-nav-bg)' }}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2 text-sm text-text-secondary transition-all hover:text-accent">
+          <button type="button" onClick={() => navigate('/')} className="flex items-center gap-2 text-sm text-text-secondary transition-all hover:text-accent">
             <ArrowRight size={18} />
             <span>{t('contact.backToCv')}</span>
           </button>
           <div className="flex items-center gap-3">
             <h1 className="font-cairo text-base font-bold text-text-primary">{t('contact.title')}</h1>
             <LanguageSwitcher />
-            <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-gold text-text-secondary transition-all hover:border-accent hover:text-accent">
+            <button type="button" onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-gold text-text-secondary transition-all hover:border-accent hover:text-accent">
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
@@ -194,47 +204,37 @@ export default function ContactPage() {
                 )}
 
                 <div className="space-y-5">
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('contact.fullName')}</label>
-                      <div className="relative">
-                        <User size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
-                        <input
-                          type="text" value={formData.name}
-                          onChange={e => handleChange('name', e.target.value)}
-                          className={`w-full rounded-xl border bg-bg-input py-3 ps-10 pe-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ${errors.name ? 'border-red-400' : 'border-border-gold'}`}
-                          placeholder={t('contact.namePlaceholder')}
-                        />
-                      </div>
-                      {errors.name && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.name}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('contact.emailLabel')}</label>
-                      <div className="relative">
-                        <Mail size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
-                        <input
-                          type="email" value={formData.email} dir="ltr"
-                          onChange={e => handleChange('email', e.target.value)}
-                          className={`w-full rounded-xl border bg-bg-input py-3 ps-10 pe-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ${errors.email ? 'border-red-400' : 'border-border-gold'}`}
-                          placeholder={t('contact.emailPlaceholder')}
-                        />
-                      </div>
-                      {errors.email && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.email}</p>}
-                    </div>
-                  </div>
+                  {/* Name */}
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('contact.subject')}</label>
+                    <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('contact.fullName')}</label>
                     <div className="relative">
-                      <FileText size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
+                      <User size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
                       <input
-                        type="text" value={formData.subject}
-                        onChange={e => handleChange('subject', e.target.value)}
-                        className={`w-full rounded-xl border bg-bg-input py-3 ps-10 pe-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ${errors.subject ? 'border-red-400' : 'border-border-gold'}`}
-                        placeholder={t('contact.subjectPlaceholder')}
+                        type="text" value={formData.name}
+                        onChange={e => handleChange('name', e.target.value)}
+                        className={`w-full rounded-xl border bg-bg-input py-3 ps-10 pe-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ${errors.name ? 'border-red-400' : 'border-border-gold'}`}
+                        placeholder={t('contact.namePlaceholder')}
                       />
                     </div>
-                    {errors.subject && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.subject}</p>}
+                    {errors.name && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.name}</p>}
                   </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('contact.emailLabel')}</label>
+                    <div className="relative">
+                      <Mail size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
+                      <input
+                        type="email" value={formData.email} dir="ltr"
+                        onChange={e => handleChange('email', e.target.value)}
+                        className={`w-full rounded-xl border bg-bg-input py-3 ps-10 pe-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ${errors.email ? 'border-red-400' : 'border-border-gold'}`}
+                        placeholder={t('contact.emailPlaceholder')}
+                      />
+                    </div>
+                    {errors.email && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.email}</p>}
+                  </div>
+
+                  {/* Message */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('contact.message')}</label>
                     <textarea
@@ -245,16 +245,30 @@ export default function ContactPage() {
                     />
                     {errors.message && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.message}</p>}
                   </div>
-                  <div className="pt-2">
+
+                  {/* Action buttons */}
+                  <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                    {/* Email */}
                     <button
+                      type="button"
                       onClick={handleSendEmail}
                       disabled={status === 'loading'}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-accent to-accent-dark py-3.5 text-sm font-bold text-bg-primary transition-all hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-accent to-accent-dark py-3.5 text-sm font-bold text-bg-primary transition-all hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
                     >
                       {status === 'loading'
                         ? <Loader2 size={16} className="animate-spin" />
-                        : <Send size={16} />}
+                        : <Mail size={16} />}
                       <span>{status === 'loading' ? t('contact.sending') : t('contact.sendEmail')}</span>
+                    </button>
+
+                    {/* WhatsApp */}
+                    <button
+                      type="button"
+                      onClick={handleSendWhatsApp}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 py-3.5 text-sm font-bold text-emerald-400 transition-all hover:border-emerald-400 hover:bg-emerald-500/20 active:scale-[0.98]"
+                    >
+                      <MessageCircle size={16} />
+                      <span>{t('contact.sendWhatsapp')}</span>
                     </button>
                   </div>
                 </div>

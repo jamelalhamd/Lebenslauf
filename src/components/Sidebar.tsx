@@ -95,6 +95,14 @@ export default function Sidebar({ personalInfo, skills, languages, onEditPersona
           <div className="space-y-3">
             <div className="flex items-center gap-3 rounded-xl border border-border-gold bg-bg-primary/30 px-3 py-2"><Mail size={14} className="shrink-0 text-accent" /><span className="truncate text-xs text-text-secondary">{personalInfo.email}</span></div>
             <div className="flex items-center gap-3 rounded-xl border border-border-gold bg-bg-primary/30 px-3 py-2"><Phone size={14} className="shrink-0 text-accent" /><span className="text-xs text-text-secondary" dir="ltr">{personalInfo.phone}</span></div>
+            {(personalInfo.street || personalInfo.houseNumber) && (
+              <div className="flex items-center gap-3 rounded-xl border border-border-gold bg-bg-primary/30 px-3 py-2">
+                <MapPin size={14} className="shrink-0 text-accent" />
+                <span className="text-xs text-text-secondary" dir="ltr">
+                  {[personalInfo.street, personalInfo.houseNumber].filter(Boolean).join(' ')}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-3 rounded-xl border border-border-gold bg-bg-primary/30 px-3 py-2"><MapPin size={14} className="shrink-0 text-accent" /><span className="text-xs text-text-secondary">{personalInfo.address}</span></div>
             {personalInfo.github && <a href={personalInfo.github} target="_blank" rel="noreferrer noopener" className="flex items-center gap-3 rounded-xl border border-border-gold bg-bg-primary/30 px-3 py-2 transition-all hover:border-accent hover:text-accent"><Github size={14} className="shrink-0 text-accent" /><span className="truncate text-xs text-text-secondary">{personalInfo.github.replace(/^https?:\/\//, '')}</span></a>}
             {personalInfo.linkedin && <a href={personalInfo.linkedin} target="_blank" rel="noreferrer noopener" className="flex items-center gap-3 rounded-xl border border-border-gold bg-bg-primary/30 px-3 py-2 transition-all hover:border-accent hover:text-accent"><Linkedin size={14} className="shrink-0 text-accent" /><span className="truncate text-xs text-text-secondary">{personalInfo.linkedin.replace(/^https?:\/\//, '')}</span></a>}

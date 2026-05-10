@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Upload, X, AlertCircle } from 'lucide-react';
-import { uploadMediaFile } from '../lib/cloudinary';
+import { uploadMediaFile, deleteFromCloudinary } from '../lib/cloudinary';
 import Modal from './Modal';
 import { PersonalInfo, Experience, Skill, Language, Certificate } from '../types';
 import { validateEmail, validatePhone, validateRequired, generateId } from '../store';
@@ -29,7 +29,7 @@ export function EditPersonalInfoModal({ isOpen, onClose, onSave, data }: { isOpe
     reader.readAsDataURL(file);
   };
   const inp = (label: string, field: keyof PersonalInfo, ph: string, dir?: string) => (<div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{label}</label><input type="text" value={form[field] ?? ''} onChange={e => handleChange(field, e.target.value)} className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors[field] ? 'border-red-400' : 'border-border-gold'}`} placeholder={ph} dir={dir} />{errors[field] && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors[field]}</p>}</div>);
-  return (<Modal isOpen={isOpen} onClose={onClose} title={t('editPersonalInfo.title')} size="lg"><div className="space-y-4"><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editPersonalInfo.photo')}</label><div className="flex flex-col items-center gap-3 rounded-2xl border border-border-gold bg-bg-input p-4"><div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-bg-secondary text-xl font-bold text-text-secondary">{form.photoUrl ? <img src={form.photoUrl} alt={form.name} className="h-full w-full object-cover" /> : <span>{form.name.charAt(0)}</span>}</div><div className="flex flex-wrap items-center justify-center gap-3"><button type="button" onClick={() => photoInputRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-dashed border-accent/60 bg-accent/5 px-4 py-2 text-sm text-accent transition-all hover:border-accent hover:bg-accent/10"><Upload size={16} /><span>{t('editPersonalInfo.photoButton')}</span></button>{form.photoUrl && <button type="button" onClick={() => setForm(p => ({ ...p, photoUrl: '' }))} className="rounded-xl border border-border-gold bg-bg-secondary/70 px-4 py-2 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent">{t('editPersonalInfo.removePhoto')}</button>}</div><input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />{errors.photo && <p className="mt-1 text-xs text-red-400">{errors.photo}</p>}</div></div>{inp(t('editPersonalInfo.fullName'), 'name', t('editPersonalInfo.namePlaceholder'))}{inp(t('editPersonalInfo.jobTitle'), 'title', t('editPersonalInfo.titlePlaceholder'))}{inp(t('editPersonalInfo.email'), 'email', t('editPersonalInfo.emailPlaceholder'), 'ltr')}{inp(t('editPersonalInfo.phone'), 'phone', t('editPersonalInfo.phonePlaceholder'), 'ltr')}{inp(t('editPersonalInfo.address'), 'address', t('editPersonalInfo.addressPlaceholder'))}{inp(t('editPersonalInfo.github'), 'github', t('editPersonalInfo.githubPlaceholder'), 'ltr')}{inp(t('editPersonalInfo.linkedin'), 'linkedin', t('editPersonalInfo.linkedinPlaceholder'), 'ltr')}<div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editPersonalInfo.bio')}</label><textarea value={form.bio} onChange={e => handleChange('bio', e.target.value)} rows={4} className="w-full resize-none rounded-xl border border-border-gold bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30" placeholder={t('editPersonalInfo.bioPlaceholder')} /></div><div className="flex gap-3 pt-2"><button onClick={() => { if (validate()) { onSave(form); onClose(); } }} className="flex-1 rounded-xl bg-gradient-to-l from-accent to-accent-dark py-2.5 text-sm font-semibold text-bg-primary transition-all hover:shadow-lg hover:shadow-accent/20">{t('modal.saveChanges')}</button><button onClick={onClose} className="flex-1 rounded-xl border border-border-gold py-2.5 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent">{t('modal.cancel')}</button></div></div></Modal>);
+  return (<Modal isOpen={isOpen} onClose={onClose} title={t('editPersonalInfo.title')} size="lg"><div className="space-y-4"><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editPersonalInfo.photo')}</label><div className="flex flex-col items-center gap-3 rounded-2xl border border-border-gold bg-bg-input p-4"><div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-bg-secondary text-xl font-bold text-text-secondary">{form.photoUrl ? <img src={form.photoUrl} alt={form.name} className="h-full w-full object-cover" /> : <span>{form.name.charAt(0)}</span>}</div><div className="flex flex-wrap items-center justify-center gap-3"><button type="button" onClick={() => photoInputRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-dashed border-accent/60 bg-accent/5 px-4 py-2 text-sm text-accent transition-all hover:border-accent hover:bg-accent/10"><Upload size={16} /><span>{t('editPersonalInfo.photoButton')}</span></button>{form.photoUrl && <button type="button" onClick={() => setForm(p => ({ ...p, photoUrl: '' }))} className="rounded-xl border border-border-gold bg-bg-secondary/70 px-4 py-2 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent">{t('editPersonalInfo.removePhoto')}</button>}</div><input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />{errors.photo && <p className="mt-1 text-xs text-red-400">{errors.photo}</p>}</div></div>{inp(t('editPersonalInfo.fullName'), 'name', t('editPersonalInfo.namePlaceholder'))}{inp(t('editPersonalInfo.jobTitle'), 'title', t('editPersonalInfo.titlePlaceholder'))}{inp(t('editPersonalInfo.email'), 'email', t('editPersonalInfo.emailPlaceholder'), 'ltr')}{inp(t('editPersonalInfo.phone'), 'phone', t('editPersonalInfo.phonePlaceholder'), 'ltr')}{inp(t('editPersonalInfo.address'), 'address', t('editPersonalInfo.addressPlaceholder'))}<div className="grid grid-cols-2 gap-3">{inp(t('editPersonalInfo.street'), 'street', t('editPersonalInfo.streetPlaceholder'))}{inp(t('editPersonalInfo.houseNumber'), 'houseNumber', t('editPersonalInfo.houseNumberPlaceholder'))}</div>{inp(t('editPersonalInfo.github'), 'github', t('editPersonalInfo.githubPlaceholder'), 'ltr')}{inp(t('editPersonalInfo.linkedin'), 'linkedin', t('editPersonalInfo.linkedinPlaceholder'), 'ltr')}<div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editPersonalInfo.bio')}</label><textarea value={form.bio} onChange={e => handleChange('bio', e.target.value)} rows={4} className="w-full resize-none rounded-xl border border-border-gold bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30" placeholder={t('editPersonalInfo.bioPlaceholder')} /></div><div className="flex gap-3 pt-2"><button type="button" onClick={() => { if (validate()) { onSave(form); onClose(); } }} className="flex-1 rounded-xl bg-gradient-to-l from-accent to-accent-dark py-2.5 text-sm font-semibold text-bg-primary transition-all hover:shadow-lg hover:shadow-accent/20">{t('modal.saveChanges')}</button><button type="button" onClick={onClose} className="flex-1 rounded-xl border border-border-gold py-2.5 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent">{t('modal.cancel')}</button></div></div></Modal>);
 }
 
 export function EditExperienceModal({ isOpen, onClose, onSave, data }: { isOpen: boolean; onClose: () => void; onSave: (d: Experience) => void; data: Experience | null }) {
@@ -59,15 +59,38 @@ export function EditLanguagesModal({ isOpen, onClose, onSave, languages }: { isO
 }
 
 export function EditCertificateModal({ isOpen, onClose, onSave, data }: { isOpen: boolean; onClose: () => void; onSave: (d: Certificate) => void; data: Certificate | null }) {
-  const empty = { id: generateId(), name: '', issuer: '', date: '', description: '', fileUrl: '', fileName: '', filePublicId: '' };
+  const empty: Certificate = { id: generateId(), name: '', issuer: '', date: '', description: '', fileUrl: '', fileName: '', filePublicId: '' };
   const [form, setForm] = useState<Certificate>(data || empty);
   const [errors, setErrors] = useState<VE>({});
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Tracks files uploaded THIS session so we can delete them if the user discards or replaces them
+  const sessionUpload = useRef<{ publicId: string; resourceType: 'image' | 'raw' } | null>(null);
   const { t } = useLanguage();
-  useEffect(() => { if (isOpen) { setForm(data || { ...empty, id: generateId() }); setErrors({}); setUploading(false); } }, [isOpen, data]);
-  const validate = (): boolean => { const e: VE = {}; if (!validateRequired(form.name)) e.name = t('editCertificate.nameRequired'); if (!validateRequired(form.issuer)) e.issuer = t('editCertificate.issuerRequired'); if (!validateRequired(form.date)) e.date = t('editCertificate.dateRequired'); setErrors(e); return !Object.keys(e).length; };
-  const handleChange = (f: keyof Certificate, v: string) => { setForm(p => ({ ...p, [f]: v })); if (errors[f]) setErrors(p => ({ ...p, [f]: '' })); };
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(data || { ...empty, id: generateId() });
+      setErrors({});
+      setUploading(false);
+      sessionUpload.current = null;
+    }
+  }, [isOpen, data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const validate = (): boolean => {
+    const e: VE = {};
+    if (!validateRequired(form.name)) e.name = t('editCertificate.nameRequired');
+    if (!validateRequired(form.issuer)) e.issuer = t('editCertificate.issuerRequired');
+    if (!validateRequired(form.date)) e.date = t('editCertificate.dateRequired');
+    setErrors(e);
+    return !Object.keys(e).length;
+  };
+
+  const handleChange = (f: keyof Certificate, v: string) => {
+    setForm(p => ({ ...p, [f]: v }));
+    if (errors[f]) setErrors(p => ({ ...p, [f]: '' }));
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -78,12 +101,104 @@ export function EditCertificateModal({ isOpen, onClose, onSave, data }: { isOpen
     try {
       const result = await uploadMediaFile(f);
       if (!result) throw new Error();
-      setForm(p => ({ ...p, fileUrl: result.url, fileName: f.name, filePublicId: result.publicId, fileResourceType: result.resourceType }));
+      // Delete the previously session-uploaded file before saving the new one.
+      // (The original cert file is handled by App.tsx when the form is saved.)
+      if (sessionUpload.current) {
+        deleteFromCloudinary(sessionUpload.current.publicId, sessionUpload.current.resourceType).catch(console.warn);
+      }
+      sessionUpload.current = { publicId: result.publicId, resourceType: result.resourceType };
+      setForm(p => ({ ...p, fileUrl: result.url, fileName: f.name, fileMimeType: f.type, filePublicId: result.publicId, fileResourceType: result.resourceType }));
     } catch {
       setErrors(p => ({ ...p, file: 'Upload fehlgeschlagen. Bitte erneut versuchen.' }));
     } finally {
       setUploading(false);
     }
   };
-  return (<Modal isOpen={isOpen} onClose={onClose} title={data ? t('editCertificate.titleEdit') : t('editCertificate.titleAdd')} size="lg"><div className="space-y-4"><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.name')}</label><input type="text" value={form.name} onChange={e => handleChange('name', e.target.value)} className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors.name ? 'border-red-400' : 'border-border-gold'}`} placeholder={t('editCertificate.namePlaceholder')} />{errors.name && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.name}</p>}</div><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.issuer')}</label><input type="text" value={form.issuer} onChange={e => handleChange('issuer', e.target.value)} className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors.issuer ? 'border-red-400' : 'border-border-gold'}`} placeholder={t('editCertificate.issuerPlaceholder')} />{errors.issuer && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.issuer}</p>}</div><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.date')}</label><input type="month" value={form.date} onChange={e => handleChange('date', e.target.value)} className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors.date ? 'border-red-400' : 'border-border-gold'}`} dir="ltr" />{errors.date && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.date}</p>}</div><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.description')}</label><textarea value={form.description} onChange={e => handleChange('description', e.target.value)} rows={3} className="w-full resize-none rounded-xl border border-border-gold bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30" placeholder={t('editCertificate.descPlaceholder')} /></div><div><label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.file')}</label><input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx,.txt" onChange={handleFile} className="hidden" disabled={uploading} /><button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-accent/30 py-4 text-sm text-accent transition-all hover:border-accent hover:bg-accent/5 disabled:opacity-50">{uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" /> : <Upload size={16} />}<span>{uploading ? 'Wird hochgeladen…' : (form.fileName || t('editCertificate.chooseFile'))}</span></button>{errors.file && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.file}</p>}{form.fileName && !uploading && <div className="mt-2 flex items-center justify-between rounded-lg bg-accent/5 px-3 py-2"><span className="text-xs text-accent">{form.fileName}</span><button type="button" aria-label="Datei entfernen" onClick={() => setForm(p => ({ ...p, fileUrl: '', fileName: '', filePublicId: '', fileResourceType: undefined }))} className="text-text-secondary hover:text-red-400"><X size={14} /></button></div>}</div><div className="flex gap-3 pt-2"><button type="button" onClick={() => { if (!uploading && validate()) { onSave(form); onClose(); } }} disabled={uploading} className="flex-1 rounded-xl bg-gradient-to-l from-accent to-accent-dark py-2.5 text-sm font-semibold text-bg-primary transition-all hover:shadow-lg hover:shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed">{t('modal.save')}</button><button type="button" onClick={onClose} disabled={uploading} className="flex-1 rounded-xl border border-border-gold py-2.5 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent disabled:opacity-40">{t('modal.cancel')}</button></div></div></Modal>);
+
+  const handleRemoveFile = () => {
+    // Delete the session-uploaded file when the user explicitly removes it
+    if (sessionUpload.current) {
+      deleteFromCloudinary(sessionUpload.current.publicId, sessionUpload.current.resourceType).catch(console.warn);
+      sessionUpload.current = null;
+    }
+    setForm(p => ({ ...p, fileUrl: '', fileName: '', fileMimeType: undefined, filePublicId: '', fileResourceType: undefined }));
+  };
+
+  const handleSave = () => {
+    if (uploading || !validate()) return;
+    sessionUpload.current = null; // Committed — App.tsx owns cleanup from here
+    onSave(form);
+    onClose();
+  };
+
+  const handleClose = () => {
+    // Delete any session-uploaded file the user chose not to save
+    if (sessionUpload.current) {
+      deleteFromCloudinary(sessionUpload.current.publicId, sessionUpload.current.resourceType).catch(console.warn);
+      sessionUpload.current = null;
+    }
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title={data ? t('editCertificate.titleEdit') : t('editCertificate.titleAdd')} size="lg">
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.name')}</label>
+          <input type="text" value={form.name} onChange={e => handleChange('name', e.target.value)}
+            className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors.name ? 'border-red-400' : 'border-border-gold'}`}
+            placeholder={t('editCertificate.namePlaceholder')} />
+          {errors.name && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.name}</p>}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.issuer')}</label>
+          <input type="text" value={form.issuer} onChange={e => handleChange('issuer', e.target.value)}
+            className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors.issuer ? 'border-red-400' : 'border-border-gold'}`}
+            placeholder={t('editCertificate.issuerPlaceholder')} />
+          {errors.issuer && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.issuer}</p>}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.date')}</label>
+          <input type="month" value={form.date} onChange={e => handleChange('date', e.target.value)}
+            className={`w-full rounded-xl border bg-bg-input py-2.5 px-4 text-sm text-text-primary transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 ${errors.date ? 'border-red-400' : 'border-border-gold'}`}
+            dir="ltr" />
+          {errors.date && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.date}</p>}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.description')}</label>
+          <textarea value={form.description} onChange={e => handleChange('description', e.target.value)} rows={3}
+            className="w-full resize-none rounded-xl border border-border-gold bg-bg-input py-2.5 px-4 text-sm text-text-primary placeholder:text-text-secondary/40 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+            placeholder={t('editCertificate.descPlaceholder')} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-text-secondary">{t('editCertificate.file')}</label>
+          <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx,.txt" onChange={handleFile} className="hidden" disabled={uploading} />
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-accent/30 py-4 text-sm text-accent transition-all hover:border-accent hover:bg-accent/5 disabled:opacity-50">
+            {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" /> : <Upload size={16} />}
+            <span>{uploading ? 'Wird hochgeladen…' : (form.fileName || t('editCertificate.chooseFile'))}</span>
+          </button>
+          {errors.file && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.file}</p>}
+          {form.fileName && !uploading && (
+            <div className="mt-2 flex items-center justify-between rounded-lg bg-accent/5 px-3 py-2">
+              <span className="text-xs text-accent">{form.fileName}</span>
+              <button type="button" aria-label="Datei entfernen" onClick={handleRemoveFile} className="text-text-secondary hover:text-red-400">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={handleSave} disabled={uploading}
+            className="flex-1 rounded-xl bg-gradient-to-l from-accent to-accent-dark py-2.5 text-sm font-semibold text-bg-primary transition-all hover:shadow-lg hover:shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed">
+            {t('modal.save')}
+          </button>
+          <button type="button" onClick={handleClose} disabled={uploading}
+            className="flex-1 rounded-xl border border-border-gold py-2.5 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent disabled:opacity-40">
+            {t('modal.cancel')}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
 }

@@ -4,9 +4,12 @@ export interface PersonalInfo {
   email: string;
   phone: string;
   address: string;
+  street?: string;
+  houseNumber?: string;
   github?: string;
   linkedin?: string;
   photoUrl?: string;
+  photoPublicId?: string;
   bio: string;
 }
 
@@ -39,6 +42,7 @@ export interface Certificate {
   description: string;
   fileUrl: string;
   fileName: string;
+  fileMimeType?: string;
   filePublicId?: string;
   fileResourceType?: 'image' | 'raw';
 }

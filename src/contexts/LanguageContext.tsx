@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Language, translations, monthNames, migrateLevel, LevelKey } from '../i18n/translations';
+import { subscribeToTranslations, saveTranslationDoc } from '../lib/firestore';
 
 interface LanguageContextType {
   language: Language;
@@ -13,6 +14,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 const LANG_KEY = 'cv-language';
+const SUPPORTED_LANGS: Language[] = ['ar', 'en', 'de'];
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
@@ -20,6 +22,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (stored === 'en' || stored === 'de' || stored === 'ar') return stored;
     return 'ar';
   });
+
+  // Firestore-loaded labels override code defaults; keyed by language
+  const [firestoreLabels, setFirestoreLabels] = useState<Partial<Record<Language, Record<string, string>>>>({});
 
   const dir = language === 'ar' ? 'rtl' : 'ltr';
 
@@ -30,13 +35,33 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LANG_KEY, language);
   }, [language, dir]);
 
+  // Subscribe to all supported language documents in Firestore.
+  // When a document doesn't exist yet, seed it from code defaults so admins
+  // can edit labels in Firebase Console without redeploying.
+  useEffect(() => {
+    const unsubs = SUPPORTED_LANGS.map(lang =>
+      subscribeToTranslations(
+        lang,
+        (labels) => setFirestoreLabels(prev => ({ ...prev, [lang]: labels })),
+        () => saveTranslationDoc(lang, translations[lang]),
+      )
+    );
+    return () => { unsubs.forEach(u => u?.()); };
+  }, []);
+
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
   }, []);
 
+  // Firestore values override code defaults; fallback chain:
+  // Firestore[currentLang] → code[currentLang] → Firestore[ar] → code[ar] → key
   const t = useCallback((key: string): string => {
-    return translations[language]?.[key] || translations.ar[key] || key;
-  }, [language]);
+    return firestoreLabels[language]?.[key]
+      || translations[language]?.[key]
+      || firestoreLabels.ar?.[key]
+      || translations.ar[key]
+      || key;
+  }, [language, firestoreLabels]);
 
   const formatDate = useCallback((dateStr: string): string => {
     if (!dateStr) return dateStr;
@@ -55,8 +80,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const getLevelDisplay = useCallback((level: string): string => {
     const key = migrateLevel(level);
-    return translations[language]?.[`level.${key}`] || translations.ar[`level.${key}`] || level;
-  }, [language]);
+    return firestoreLabels[language]?.[`level.${key}`]
+      || translations[language]?.[`level.${key}`]
+      || translations.ar[`level.${key}`]
+      || level;
+  }, [language, firestoreLabels]);
 
   const levelOptions: { key: LevelKey; label: string }[] = [
     { key: 'native', label: t('level.native') },
