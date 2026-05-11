@@ -21,10 +21,8 @@ export function loadCVData(): CVData {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // If stored data is from an older version, fall back to fresh defaults
-      if (!parsed._version || parsed._version < DATA_VERSION) {
-        return { ...defaultCVData };
-      }
+      // Always merge stored data — never discard it for a version mismatch.
+      // Firestore is authoritative; localStorage is only a rendering cache.
       const data: CVData = {
         personalInfo: { ...defaultCVData.personalInfo, ...parsed.personalInfo },
         experiences: parsed.experiences || defaultCVData.experiences,

@@ -31,7 +31,11 @@
       "Bash(grep -E \"^\\\\-.*\\\\.\\(json|ts|tsx|yaml|yml\\)$|^d\")",
       "Bash(npx vercel *)",
       "Bash(echo \"Exit: $?\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('firebase:', p.dependencies.firebase\\); console.log\\('vite:', p.devDependencies.vite\\)\")",
+      "Bash(cat .firebaserc)",
+      "Bash(ls *.rules)",
+      "Bash(ls firebase*.json)"
     ]
   },
   "enableAllProjectMcpServers": true

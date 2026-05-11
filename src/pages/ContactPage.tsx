@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Mail, User, CheckCircle, AlertCircle,
   ArrowRight, Sun, Moon, Loader2, Phone, MapPin, MessageCircle,
 } from 'lucide-react';
-import { validateEmail, validateRequired, loadCVData } from '../store';
+import { validateEmail, validateRequired, loadCVData, loadCVDataWithSync } from '../store';
+import { subscribeToFirestore } from '../lib/firestore';
+import { CVData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -25,13 +27,21 @@ function buildWhatsAppUrl(form: FormData): string {
 }
 
 export default function ContactPage() {
-  const cvData = loadCVData();
+  const [cvData, setCvData] = useState<CVData>(loadCVData);
   const { isDark, toggleTheme } = useTheme();
   const { t, dir } = useLanguage();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({ name: '', email: '', message: '' });
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<FormStatus>('idle');
+
+  // Load fresh data from Firestore on mount, then stay subscribed for real-time updates
+  useEffect(() => {
+    let mounted = true;
+    loadCVDataWithSync().then(data => { if (mounted) setCvData(data); });
+    const unsub = subscribeToFirestore(data => { if (mounted) setCvData(data); });
+    return () => { mounted = false; unsub?.(); };
+  }, []);
 
   const validate = (): boolean => {
     const e: FormErrors = {};

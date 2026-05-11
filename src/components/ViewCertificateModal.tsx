@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, Download, Award, FileText, File, ExternalLink } from 'lucide-react';
 import { Certificate } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getOptimizedUrl, downloadFile } from '../lib/cloudinary';
+import { getOptimizedUrl, downloadFile, getPdfViewUrl, getDownloadUrl } from '../lib/cloudinary';
 
 interface ViewCertificateModalProps { isOpen: boolean; onClose: () => void; certificate: Certificate | null; }
 
@@ -30,16 +30,17 @@ export default function ViewCertificateModal({ isOpen, onClose, certificate }: V
   const isImage = fileType === 'image';
   const isPdf = fileType === 'pdf';
 
-  // Display URL: optimised for images, raw for everything else
+  // Display URL: optimised for images, inline for PDFs, raw for everything else
   const displayUrl = certificate.fileUrl
-    ? (isImage ? getOptimizedUrl(certificate.fileUrl) : certificate.fileUrl)
+    ? (isImage ? getOptimizedUrl(certificate.fileUrl) : isPdf ? getPdfViewUrl(certificate.fileUrl) : certificate.fileUrl)
     : '';
 
   const handleDownload = async () => {
     if (!certificate.fileUrl || downloading) return;
     setDownloading(true);
     try {
-      await downloadFile(certificate.fileUrl, certificate.fileName || certificate.name || 'file');
+      // Use fl_attachment URL so Cloudinary serves Content-Disposition: attachment
+      await downloadFile(getDownloadUrl(certificate.fileUrl), certificate.fileName || certificate.name || 'file');
     } finally {
       setDownloading(false);
     }
@@ -57,7 +58,7 @@ export default function ViewCertificateModal({ isOpen, onClose, certificate }: V
           exit={{ opacity: 0, scale: 0.9 }}
           className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border-gold bg-bg-secondary p-6 shadow-2xl"
         >
-          <button type="button" onClick={onClose} aria-label="Schließen" className="absolute end-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-border-gold bg-bg-secondary text-text-secondary transition-all hover:border-accent hover:text-accent">
+          <button type="button" onClick={onClose} aria-label={t('viewCert.close')} className="absolute end-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-border-gold bg-bg-secondary text-text-secondary transition-all hover:border-accent hover:text-accent">
             <X size={18} />
           </button>
 
@@ -85,38 +86,18 @@ export default function ViewCertificateModal({ isOpen, onClose, certificate }: V
                 <img src={displayUrl} alt={certificate.name} className="w-full object-contain" />
               )}
 
-              {/* PDF: <object> with explicit MIME type so the browser always invokes
-                  its PDF viewer. Falls back to a link when inline rendering is blocked
-                  (mobile browsers, PDF-plugin disabled, etc.). */}
+              {/* PDF: iframe with fl_inline so Cloudinary serves Content-Disposition: inline,
+                  which triggers the browser's built-in PDF viewer. */}
               {isPdf && (
                 <>
-                  <object
-                    data={displayUrl}
-                    type="application/pdf"
-                    className="h-[480px] w-full"
-                  >
-                    {/* Shown when the browser cannot render the PDF inline */}
-                    <div className="flex h-[480px] flex-col items-center justify-center gap-4 p-6 text-center">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10">
-                        <FileText size={32} className="text-accent" />
-                      </div>
-                      <p className="text-sm text-text-secondary">{t('viewCert.previewUnavailable')}</p>
-                      <a
-                        href={displayUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-2 rounded-xl border border-border-gold px-4 py-2 text-sm text-text-secondary transition-all hover:border-accent hover:text-accent"
-                      >
-                        <ExternalLink size={14} />
-                        <span>{t('viewCert.openPdf')}</span>
-                      </a>
-                    </div>
-                  </object>
-
-                  {/* "Open in new tab" always shown below the viewer */}
+                  <iframe
+                    src={displayUrl}
+                    title={certificate.name}
+                    className="h-[480px] w-full border-0"
+                  />
                   <div className="flex items-center justify-center border-t border-border-gold bg-bg-primary/30 py-2">
                     <a
-                      href={displayUrl}
+                      href={certificate.fileUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-text-secondary transition-all hover:text-accent"

@@ -90,6 +90,16 @@ export function getDownloadUrl(url: string, _resourceType?: 'image' | 'raw'): st
   return url.replace('/upload/', '/upload/fl_attachment/');
 }
 
+// fl_inline makes Cloudinary serve the file inline (Content-Disposition: inline)
+// so the browser PDF viewer renders it instead of downloading it.
+export function getPdfViewUrl(url: string): string {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  if (!url.includes('fl_')) {
+    return url.replace('/upload/', '/upload/fl_inline/');
+  }
+  return url;
+}
+
 function applyTransform(url: string, transform: string): string {
   if (!url || !url.includes('res.cloudinary.com')) return url;
   return url.replace('/upload/', `/upload/${transform}/`);

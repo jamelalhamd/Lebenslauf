@@ -6,12 +6,12 @@ import {
   Sun, Moon, Flame, Cloud, CloudOff,
 } from 'lucide-react';
 import { CVData, PersonalInfo, Experience, Skill, Language, Certificate } from './types';
-import { loadCVData, saveCVData, saveCVDataWithSync, loadCVDataWithSync } from './store';
+import { loadCVData, saveCVData, loadCVDataWithSync } from './store';
 import { useAuth } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { useFirebase } from './contexts/FirebaseContext';
-import { subscribeToFirestore } from './lib/firestore';
+import { subscribeToFirestore, saveToFirestore } from './lib/firestore';
 import { deleteFromCloudinary } from './lib/cloudinary';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import Sidebar from './components/Sidebar';
@@ -49,15 +49,15 @@ export default function CVPage() {
   const { t, dir } = useLanguage();
   const { connected, setLastSync } = useFirebase();
   const navigate = useNavigate();
-  // Prevents the save-useEffect from writing Firestore data back to Firestore
-  // when cvData changes because of a real-time snapshot (feedback loop guard).
-  const isFirestoreUpdate = useRef(false);
+  const [showSyncError, setShowSyncError] = useState(false);
+  const cvDataRef = useRef<CVData>(cvData);
 
   // Load data from Firebase on mount
   useEffect(() => {
     let mounted = true;
     loadCVDataWithSync().then(data => {
       if (mounted) {
+        cvDataRef.current = data;
         setCvData(data);
         setIsLoading(false);
       }
@@ -65,28 +65,22 @@ export default function CVPage() {
     return () => { mounted = false; };
   }, []);
 
-  // Subscribe to real-time Firestore updates
+  // Subscribe to real-time Firestore updates — cache locally, never write back
   useEffect(() => {
     const unsub = subscribeToFirestore((data) => {
-      isFirestoreUpdate.current = true; // mark so the save-effect skips write-back
+      cvDataRef.current = data;
       setCvData(data);
+      saveCVData(data);
       setLastSync(new Date());
     });
     return () => { if (unsub) unsub(); };
   }, [setLastSync]);
 
-  // Persist data whenever it changes.
-  // If the change came from a Firestore snapshot, only update localStorage (avoids
-  // writing the snapshot straight back to Firestore and creating an infinite loop).
   useEffect(() => {
-    if (isLoading) return;
-    if (isFirestoreUpdate.current) {
-      isFirestoreUpdate.current = false;
-      saveCVData(cvData); // local cache only
-      return;
-    }
-    saveCVDataWithSync(cvData); // local + Firestore
-  }, [cvData, isLoading]);
+    if (!showSyncError) return;
+    const timer = setTimeout(() => setShowSyncError(false), 4000);
+    return () => clearTimeout(timer);
+  }, [showSyncError]);
 
   useEffect(() => {
     const h = () => setShowScrollTop(window.scrollY > 400);
@@ -95,27 +89,31 @@ export default function CVPage() {
   }, []);
 
   const showToast = useCallback(() => { setShowSuccessToast(true); setTimeout(() => setShowSuccessToast(false), 2500); }, []);
-  const handleSavePersonalInfo = useCallback((d: PersonalInfo) => { setCvData(p => ({ ...p, personalInfo: d })); showToast(); }, [showToast]);
+
+  const persistData = useCallback(async (newData: CVData): Promise<void> => {
+    cvDataRef.current = newData;
+    setCvData(newData);
+    saveCVData(newData);
+    const ok = await saveToFirestore(newData);
+    if (!ok) setShowSyncError(true);
+  }, []);
+
+  const handleSavePersonalInfo = useCallback((d: PersonalInfo) => { persistData({ ...cvDataRef.current, personalInfo: d }); showToast(); }, [persistData, showToast]);
 
   const handleSavePhoto = useCallback((photoUrl: string, photoPublicId: string) => {
-    setCvData(p => {
-      // Delete previous photo from Cloudinary (fire-and-forget)
-      if (p.personalInfo.photoPublicId) {
-        deleteFromCloudinary(p.personalInfo.photoPublicId, 'image').catch(console.warn);
-      }
-      return { ...p, personalInfo: { ...p.personalInfo, photoUrl, photoPublicId } };
-    });
+    if (cvDataRef.current.personalInfo.photoPublicId) {
+      deleteFromCloudinary(cvDataRef.current.personalInfo.photoPublicId, 'image').catch(console.warn);
+    }
+    persistData({ ...cvDataRef.current, personalInfo: { ...cvDataRef.current.personalInfo, photoUrl, photoPublicId } });
     showToast();
-  }, [showToast]);
+  }, [persistData, showToast]);
 
   const handleDeletePhoto = useCallback(() => {
-    setCvData(p => {
-      const publicId = p.personalInfo.photoPublicId ?? 'cv/profile/photo';
-      deleteFromCloudinary(publicId, 'image').catch(console.warn);
-      return { ...p, personalInfo: { ...p.personalInfo, photoUrl: '', photoPublicId: undefined } };
-    });
+    const publicId = cvDataRef.current.personalInfo.photoPublicId ?? 'cv/profile/photo';
+    deleteFromCloudinary(publicId, 'image').catch(console.warn);
+    persistData({ ...cvDataRef.current, personalInfo: { ...cvDataRef.current.personalInfo, photoUrl: '', photoPublicId: undefined } });
     showToast();
-  }, [showToast]);
+  }, [persistData, showToast]);
 
   const generatePDF = useCallback(async () => {
     if (isGeneratingPDF) return;
@@ -172,32 +170,28 @@ export default function CVPage() {
     Object.assign(wrapper.style, { display: '', position: '', top: '', left: '', zIndex: '' });
     setIsGeneratingPDF(false);
   }, [isGeneratingPDF, cvData.personalInfo.name]);
-  const handleSaveExperience = useCallback((d: Experience) => { setCvData(p => { const ex = p.experiences.find(e => e.id === d.id); return ex ? { ...p, experiences: p.experiences.map(e => e.id === d.id ? d : e) } : { ...p, experiences: [...p.experiences, d] }; }); showToast(); }, [showToast]);
-  const handleDeleteExperience = useCallback((id: string) => { setCvData(p => ({ ...p, experiences: p.experiences.filter(e => e.id !== id) })); showToast(); }, [showToast]);
-  const handleSaveSkills = useCallback((s: Skill[]) => { setCvData(p => ({ ...p, skills: s })); showToast(); }, [showToast]);
-  const handleSaveLanguages = useCallback((l: Language[]) => { setCvData(p => ({ ...p, languages: l })); showToast(); }, [showToast]);
+  const handleSaveExperience = useCallback((d: Experience) => { const ex = cvDataRef.current.experiences.find(e => e.id === d.id); persistData(ex ? { ...cvDataRef.current, experiences: cvDataRef.current.experiences.map(e => e.id === d.id ? d : e) } : { ...cvDataRef.current, experiences: [...cvDataRef.current.experiences, d] }); showToast(); }, [persistData, showToast]);
+  const handleDeleteExperience = useCallback((id: string) => { persistData({ ...cvDataRef.current, experiences: cvDataRef.current.experiences.filter(e => e.id !== id) }); showToast(); }, [persistData, showToast]);
+  const handleSaveSkills = useCallback((s: Skill[]) => { persistData({ ...cvDataRef.current, skills: s }); showToast(); }, [persistData, showToast]);
+  const handleSaveLanguages = useCallback((l: Language[]) => { persistData({ ...cvDataRef.current, languages: l }); showToast(); }, [persistData, showToast]);
   const handleSaveCertificate = useCallback((d: Certificate) => {
-    setCvData(p => {
-      const existing = p.certificates.find(c => c.id === d.id);
-      if (existing?.filePublicId && existing.filePublicId !== d.filePublicId) {
-        deleteFromCloudinary(existing.filePublicId, existing.fileResourceType ?? 'raw').catch(console.error);
-      }
-      return existing
-        ? { ...p, certificates: p.certificates.map(c => c.id === d.id ? d : c) }
-        : { ...p, certificates: [...p.certificates, d] };
-    });
+    const existing = cvDataRef.current.certificates.find(c => c.id === d.id);
+    if (existing?.filePublicId && existing.filePublicId !== d.filePublicId) {
+      deleteFromCloudinary(existing.filePublicId, existing.fileResourceType ?? 'raw').catch(console.error);
+    }
+    persistData(existing
+      ? { ...cvDataRef.current, certificates: cvDataRef.current.certificates.map(c => c.id === d.id ? d : c) }
+      : { ...cvDataRef.current, certificates: [...cvDataRef.current.certificates, d] });
     showToast();
-  }, [showToast]);
+  }, [persistData, showToast]);
   const handleDeleteCertificate = useCallback((id: string) => {
-    setCvData(p => {
-      const cert = p.certificates.find(c => c.id === id);
-      if (cert?.filePublicId) {
-        deleteFromCloudinary(cert.filePublicId, cert.fileResourceType ?? 'raw').catch(console.error);
-      }
-      return { ...p, certificates: p.certificates.filter(c => c.id !== id) };
-    });
+    const cert = cvDataRef.current.certificates.find(c => c.id === id);
+    if (cert?.filePublicId) {
+      deleteFromCloudinary(cert.filePublicId, cert.fileResourceType ?? 'raw').catch(console.error);
+    }
+    persistData({ ...cvDataRef.current, certificates: cvDataRef.current.certificates.filter(c => c.id !== id) });
     showToast();
-  }, [showToast]);
+  }, [persistData, showToast]);
 
   if (isLoading) {
     return (
@@ -362,6 +356,14 @@ export default function CVPage() {
         {showSuccessToast && (
           <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="no-print fixed bottom-6 end-6 z-50 flex items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-3 shadow-lg backdrop-blur-sm">
             <div className="h-2 w-2 rounded-full bg-green-400" /><span className="text-sm text-green-400">{t('toast.saved')}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSyncError && (
+          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="no-print fixed bottom-20 end-6 z-50 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 shadow-lg backdrop-blur-sm">
+            <div className="h-2 w-2 rounded-full bg-red-400" /><span className="text-sm text-red-400">{t('toast.syncError')}</span>
           </motion.div>
         )}
       </AnimatePresence>

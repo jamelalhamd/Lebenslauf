@@ -109,7 +109,7 @@ export function EditCertificateModal({ isOpen, onClose, onSave, data }: { isOpen
       sessionUpload.current = { publicId: result.publicId, resourceType: result.resourceType };
       setForm(p => ({ ...p, fileUrl: result.url, fileName: f.name, fileMimeType: f.type, filePublicId: result.publicId, fileResourceType: result.resourceType }));
     } catch {
-      setErrors(p => ({ ...p, file: 'Upload fehlgeschlagen. Bitte erneut versuchen.' }));
+      setErrors(p => ({ ...p, file: t('photo.uploadFailed') }));
     } finally {
       setUploading(false);
     }
@@ -176,13 +176,13 @@ export function EditCertificateModal({ isOpen, onClose, onSave, data }: { isOpen
           <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-accent/30 py-4 text-sm text-accent transition-all hover:border-accent hover:bg-accent/5 disabled:opacity-50">
             {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" /> : <Upload size={16} />}
-            <span>{uploading ? 'Wird hochgeladen…' : (form.fileName || t('editCertificate.chooseFile'))}</span>
+            <span>{uploading ? t('editCertificate.uploading') : (form.fileName || t('editCertificate.chooseFile'))}</span>
           </button>
           {errors.file && <p className="mt-1 flex items-center gap-1 text-xs text-red-400"><AlertCircle size={12} />{errors.file}</p>}
           {form.fileName && !uploading && (
             <div className="mt-2 flex items-center justify-between rounded-lg bg-accent/5 px-3 py-2">
               <span className="text-xs text-accent">{form.fileName}</span>
-              <button type="button" aria-label="Datei entfernen" onClick={handleRemoveFile} className="text-text-secondary hover:text-red-400">
+              <button type="button" aria-label={t('editCertificate.removeFile')} onClick={handleRemoveFile} className="text-text-secondary hover:text-red-400">
                 <X size={14} />
               </button>
             </div>

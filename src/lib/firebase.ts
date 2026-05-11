@@ -1,6 +1,9 @@
 import { initializeApp, FirebaseApp, deleteApp, getApps, getApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore, getFirestore, Firestore,
+  persistentLocalCache, CACHE_SIZE_UNLIMITED,
+} from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 export interface FirebaseConfig {
@@ -34,7 +37,15 @@ export function initializeFirebase(config: FirebaseConfig = FIREBASE_CONFIG): bo
     if (app) return true;
     app = getApps().length ? getApp() : initializeApp(config);
     auth = getAuth(app);
-    db = getFirestore(app);
+    // Persistent IndexedDB cache survives page refreshes and enables offline reads.
+    // Falls back to in-memory if IndexedDB is unavailable (e.g. private/incognito).
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ cacheSizeBytes: CACHE_SIZE_UNLIMITED }),
+      });
+    } catch {
+      db = getFirestore(app);
+    }
     storage = getStorage(app);
     console.log('✅ Firebase initialized successfully');
     return true;

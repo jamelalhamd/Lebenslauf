@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Award, Edit3, Plus, Trash2, Eye, Download, ChevronDown, ChevronUp, EyeOff, FileImage, FileText, File } from 'lucide-react';
 import { Certificate } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { downloadFile } from '../lib/cloudinary';
+import { downloadFile, getDownloadUrl } from '../lib/cloudinary';
 
 interface CertificatesSectionProps { certificates: Certificate[]; showCertificates: boolean; onToggleShow: () => void; onAdd: () => void; onEdit: (c: Certificate) => void; onDelete: (id: string) => void; onView: (c: Certificate) => void; isAdmin: boolean; }
 
@@ -70,7 +70,7 @@ export default function CertificatesSection({ certificates, showCertificates, on
                     {cert.fileUrl && (
                       <button
                         type="button"
-                        onClick={() => downloadFile(cert.fileUrl, cert.fileName || cert.name || 'file')}
+                        onClick={() => downloadFile(getDownloadUrl(cert.fileUrl), cert.fileName || cert.name || 'file')}
                         className="flex items-center gap-1 rounded-lg border border-border-gold px-2 py-1 text-xs text-text-secondary transition-all hover:border-accent hover:text-accent"
                       >
                         <Download size={12} /><span>{t('certificates.download')}</span>

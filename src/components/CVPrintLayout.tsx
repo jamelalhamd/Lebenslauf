@@ -1,5 +1,6 @@
 import type { CVData } from '../types';
 import { getProfilePhotoUrl } from '../lib/cloudinary';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // ── colour palette (matches the PDF design) ────────────────────────────────
 const C_NAVY    = '#1b3a6b';
@@ -24,8 +25,11 @@ function fmtDate(d: string): string {
   return `${mo}/${yr}`;
 }
 
-function fmtRange(s: string, e: string) {
-  return `${fmtDate(s)} – ${fmtDate(e)}`;
+const PRESENT_VALUES = new Set(['present', 'gegenwart', 'حتى الآن']);
+
+function fmtRange(s: string, e: string, presentLabel: string) {
+  const endDisplay = (!e || PRESENT_VALUES.has(e.toLowerCase())) ? presentLabel : fmtDate(e);
+  return `${fmtDate(s)} – ${endDisplay}`;
 }
 
 function parseBullets(text: string): string[] {
@@ -93,8 +97,8 @@ function MainSection({ label, children }: { label: string; children: React.React
 }
 
 function JobEntry({
-  position, company, startDate, endDate, description,
-}: { position: string; company: string; startDate: string; endDate: string; description: string }) {
+  position, company, startDate, endDate, description, presentLabel,
+}: { position: string; company: string; startDate: string; endDate: string; description: string; presentLabel: string }) {
   const bullets = parseBullets(description);
   return (
     <div style={{ marginBottom: 11 }}>
@@ -106,7 +110,7 @@ function JobEntry({
           fontSize: '7.5pt', color: '#444', background: '#deeaf8',
           borderRadius: 3, padding: '2px 7px', flexShrink: 0, whiteSpace: 'nowrap',
         }}>
-          {fmtRange(startDate, endDate)}
+          {fmtRange(startDate, endDate, presentLabel)}
         </span>
       </div>
       <div style={{ fontSize: '7.5pt', color: C_BLUE, fontStyle: 'italic', margin: '2px 0 4px' }}>
@@ -141,12 +145,14 @@ function ProjectEntry({ company, description }: { company: string; description: 
 
 // ── root component ─────────────────────────────────────────────────────────
 export default function CVPrintLayout({ data }: { data: CVData }) {
+  const { t } = useLanguage();
   const p = data.personalInfo;
   const jobs     = data.experiences.filter(e => !e.company.toLowerCase().startsWith('projekt:'));
   const projects = data.experiences.filter(e =>  e.company.toLowerCase().startsWith('projekt:'));
 
   const githubDisplay   = p.github?.replace(/^https?:\/\//, '')   ?? '';
   const linkedinDisplay = p.linkedin?.replace(/^https?:\/\//, '') ?? '';
+  const presentLabel = t('experience.present');
 
   return (
     <div id="cv-print-root" style={{
@@ -201,20 +207,20 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
           width: '65mm', background: C_NAVY, color: 'white',
           padding: '16px 14px', flexShrink: 0,
         }}>
-          <SideSection label="KONTAKT">
-            <KV k="Tel:"  v={p.phone} />
-            <KV k="Mail:" v={p.email} />
-            <KV k="Web:"  v={githubDisplay} />
-            <KV k="Ort:"  v={[[p.street, p.houseNumber].filter(Boolean).join(' '), p.address].filter(Boolean).join(', ')} />
+          <SideSection label={t('cv.contact')}>
+            <KV k={t('cv.tel')}  v={p.phone} />
+            <KV k={t('cv.mail')} v={p.email} />
+            <KV k={t('cv.web')}  v={githubDisplay} />
+            <KV k={t('cv.city')} v={[[p.street, p.houseNumber].filter(Boolean).join(' '), p.address].filter(Boolean).join(', ')} />
           </SideSection>
 
-          <SideSection label="SPRACHEN">
+          <SideSection label={t('cv.languages')}>
             {data.languages.map(l => (
               <LangBar key={l.id} name={l.name} level={l.level} />
             ))}
           </SideSection>
 
-          <SideSection label="TECH SKILLS">
+          <SideSection label={t('cv.skills')}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
               {data.skills.map(s => (
                 <span key={s.id} style={{
@@ -225,7 +231,7 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
             </div>
           </SideSection>
 
-          <SideSection label="AUSBILDUNG">
+          <SideSection label={t('cv.certificates')}>
             {data.certificates.map(c => (
               <div key={c.id} style={{ marginBottom: 11 }}>
                 <div style={{ fontSize: '8pt', fontWeight: 700, color: 'white' }}>{c.name}</div>
@@ -240,13 +246,13 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
         {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
         <div style={{ flex: 1, background: 'white', padding: '16px 20px' }}>
 
-          <MainSection label="PROFIL">
+          <MainSection label={t('cv.profile')}>
             <p style={{ fontSize: '8.5pt', lineHeight: '1.55', textAlign: 'justify', margin: 0 }}>
               {p.bio}
             </p>
           </MainSection>
 
-          <MainSection label="BERUFSERFAHRUNG">
+          <MainSection label={t('cv.experience')}>
             {jobs.map(j => (
               <JobEntry
                 key={j.id}
@@ -255,12 +261,13 @@ export default function CVPrintLayout({ data }: { data: CVData }) {
                 startDate={j.startDate}
                 endDate={j.endDate}
                 description={j.description}
+                presentLabel={presentLabel}
               />
             ))}
           </MainSection>
 
           {projects.length > 0 && (
-            <MainSection label="PROJEKTE">
+            <MainSection label={t('cv.projects')}>
               {projects.map(proj => (
                 <ProjectEntry key={proj.id} company={proj.company} description={proj.description} />
               ))}
